@@ -1,0 +1,9 @@
+# Model Architecture Configuration
+architecture: "efficientnet_b0"
+num_classes: 2
+pretrained: true
+dropout_rate: 0.2
+freeze_backbone: false
+class_names:
+  - "healthy"
+  - "referable_dr"

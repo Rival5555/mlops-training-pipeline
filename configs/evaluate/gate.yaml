@@ -1,0 +1,13 @@
+# Evaluation and Production Promotion Gate Configuration
+primary_metric: "f1_macro"
+min_absolute_threshold: 0.70
+min_improvement_over_production: 0.01
+allow_first_model: true
+metrics_to_compute:
+  - "accuracy"
+  - "f1_macro"
+  - "f1_weighted"
+  - "precision_macro"
+  - "recall_macro"
+gate_decision_output: "models/checkpoints/gate_decision.json"
+gate_strategy: "fail" # "fail" loudly or "warn"

@@ -1,0 +1,67 @@
+name: Scheduled & Event-Driven Automated Retraining Pipeline
+
+on:
+  schedule:
+    # Run retrain every Sunday at 00:00 UTC
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+    inputs:
+      promote_to_production:
+        description: "Promote candidate to Production if it passes the gate (default: Staging)"
+        required: false
+        type: boolean
+        default: false
+      config_path:
+        description: "Path to pipeline configuration YAML"
+        required: false
+        default: "configs/config.yaml"
+
+jobs:
+  retrain-and-register:
+    name: Execute Full MLOps Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.11
+        run: uv python install 3.11
+
+      - name: Install Pipeline Dependencies
+        run: |
+          uv pip install --system -e .
+
+      - name: Generate Synthetic Benchmark Data (Fallback if DVC remote unavailable)
+        run: |
+          python scripts/generate_synthetic_data.py --samples-per-class 30
+
+      - name: Run Full Pipeline Flow (Prefect Orchestrator)
+        env:
+          MLFLOW_TRACKING_URI: "file:${{ github.workspace }}/mlruns"
+          MLFLOW_EXPERIMENT_NAME: "ci_retraining_pipeline"
+          MLFLOW_MODEL_NAME: "retinopathy_classifier"
+        run: |
+          PROMOTION_FLAG=""
+          if [ "${{ inputs.promote_to_production }}" = "true" ]; then
+            PROMOTION_FLAG="--promote-to-production"
+          fi
+          python -m src.pipeline.flow --config ${{ inputs.config_path || 'configs/config.yaml' }} $PROMOTION_FLAG
+
+      - name: Upload Gate Decision & Exported Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-release-artifacts
+          path: |
+            models/checkpoints/gate_decision.json
+            models/checkpoints/training_summary.json
+            models/exported/model.onnx
+            models/exported/export_summary.json

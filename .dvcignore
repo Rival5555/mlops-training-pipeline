@@ -1,0 +1,8 @@
+# Add patterns of files dvc should ignore, which could be
+# files with sensitive data, intermediate data, etc.
+.git
+.hg
+.svn
+*.pyc
+__pycache__
+.venv

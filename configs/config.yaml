@@ -1,0 +1,21 @@
+# Master Pipeline Configuration
+# Values in sub-configs are automatically merged and validated via Pydantic
+
+project_name: "automated-mlops-training-pipeline"
+environment: "development"
+pipeline_version: "1.0.0"
+
+defaults:
+  - data: data/default.yaml
+  - model: model/efficientnet_b0.yaml
+  - train: train/default.yaml
+  - evaluate: evaluate/gate.yaml
+  - export: export/onnx.yaml
+
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "retinopathy_classifier_experiment"
+  model_name: "retinopathy_classifier"
+  staging_tag: "staging"
+  production_tag: "production"
+  auto_register: true

@@ -1,0 +1,99 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pipeline"]
+
+[project]
+name = "automated-mlops-training-pipeline"
+version = "0.1.0"
+description = "Production-grade, automated, reproducible MLOps training pipeline with MLflow, Prefect, PyTorch, and DVC."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "MLOps Engineering Team" }
+]
+dependencies = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "pyyaml>=6.0.1",
+    "mlflow>=2.10.0",
+    "prefect>=3.0.0",
+    "dvc>=3.40.0",
+    "scikit-learn>=1.3.0",
+    "pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "onnx>=1.15.0",
+    "onnxscript>=0.1.0",
+    "onnxruntime>=1.16.0",
+    "structlog>=24.1.0",
+    "rich>=13.7.0",
+    "matplotlib>=3.8.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+    "types-PyYAML>=6.0.12.12"
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP"   # pyupgrade
+]
+ignore = [
+    "E501" # Line length handled by formatter
+]
+
+[tool.mypy]
+python_version = "3.10"
+mypy_path = "."
+explicit_package_bases = true
+strict = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "mlflow.*",
+    "torchvision.*",
+    "prefect.*",
+    "sklearn.*",
+    "PIL.*",
+    "onnxruntime.*",
+    "matplotlib.*"
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+pythonpath = ["."]

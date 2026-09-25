@@ -1,0 +1,56 @@
+stages:
+  ingest_validate:
+    cmd: python -m src.pipeline.stages.s01_ingest_validate --config configs/config.yaml
+    deps:
+      - configs/config.yaml
+      - configs/data/default.yaml
+      - src/pipeline/stages/s01_ingest_validate.py
+      - data/raw
+    outs:
+      - data/raw/validation_report.json:
+          cache: false
+
+  preprocess_split:
+    cmd: python -m src.pipeline.stages.s02_preprocess_split --config configs/config.yaml
+    deps:
+      - configs/config.yaml
+      - configs/data/default.yaml
+      - src/pipeline/stages/s02_preprocess_split.py
+      - data/raw
+    outs:
+      - data/processed/split_manifest.json:
+          cache: true
+
+  train:
+    cmd: python -m src.pipeline.stages.s03_train --config configs/config.yaml
+    deps:
+      - configs/config.yaml
+      - configs/model/efficientnet_b0.yaml
+      - configs/train/default.yaml
+      - src/pipeline/stages/s03_train.py
+      - data/processed/split_manifest.json
+    outs:
+      - models/checkpoints/best_model.pt:
+          cache: true
+
+  eval_gate:
+    cmd: python -m src.pipeline.stages.s04_eval_gate --config configs/config.yaml
+    deps:
+      - configs/config.yaml
+      - configs/evaluate/gate.yaml
+      - src/pipeline/stages/s04_eval_gate.py
+      - models/checkpoints/best_model.pt
+    outs:
+      - models/checkpoints/gate_decision.json:
+          cache: false
+
+  register_export:
+    cmd: python -m src.pipeline.stages.s06_export_package --config configs/config.yaml
+    deps:
+      - configs/config.yaml
+      - configs/export/onnx.yaml
+      - src/pipeline/stages/s06_export_package.py
+      - models/checkpoints/best_model.pt
+    outs:
+      - models/exported/model.onnx:
+          cache: true

@@ -1,0 +1,10 @@
+# Model Packaging and Export Configuration
+export_format: "onnx"
+opset_version: 17
+dynamic_batch: true
+output_dir: "models/exported"
+output_filename: "model.onnx"
+float_tolerance_atol: 0.0001
+float_tolerance_rtol: 0.001
+dummy_input_shape: [1, 3, 224, 224]
+verify_onnx_runtime: true

@@ -1,0 +1,15 @@
+# Training Hyperparameters and Loop Settings
+epochs: 5
+learning_rate: 0.0003
+weight_decay: 0.0001
+optimizer: "adamw"
+scheduler: "cosine"
+mixed_precision: true
+gradient_accumulation_steps: 1
+early_stopping_patience: 3
+early_stopping_metric: "val_loss"
+early_stopping_mode: "min"
+checkpoint_dir: "models/checkpoints"
+save_best_and_last: true
+log_interval_steps: 10
+seed: 42

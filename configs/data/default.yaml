@@ -1,0 +1,28 @@
+# Data Ingestion, Validation, and Preprocessing Configuration
+raw_data_dir: "data/raw"
+processed_data_dir: "data/processed"
+train_ratio: 0.70
+val_ratio: 0.15
+test_ratio: 0.15
+random_seed: 42
+image_size: [224, 224]
+num_channels: 3
+allowed_extensions:
+  - ".jpg"
+  - ".jpeg"
+  - ".png"
+min_samples_per_class: 10
+class_imbalance_max_ratio: 10.0
+batch_size: 16
+num_workers: 0
+
+# Augmentation and Normalization
+normalization:
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+augmentation:
+  horizontal_flip_prob: 0.5
+  rotation_degrees: 15
+  color_jitter_brightness: 0.1
+  color_jitter_contrast: 0.1
