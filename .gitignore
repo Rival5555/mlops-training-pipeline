@@ -45,6 +45,7 @@ models/exported/
 mlruns/
 mlartifacts/
 .prefect/
+*.db
 
 # DVC local storage
 .dvc/cache

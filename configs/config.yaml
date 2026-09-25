@@ -13,7 +13,7 @@ defaults:
   - export: export/onnx.yaml
 
 mlflow:
-  tracking_uri: "http://localhost:5000"
+  tracking_uri: "sqlite:///mlflow.db"
   experiment_name: "retinopathy_classifier_experiment"
   model_name: "retinopathy_classifier"
   staging_tag: "staging"
