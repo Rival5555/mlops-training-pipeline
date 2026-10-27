@@ -68,5 +68,4 @@ docker-down:
 	docker compose -f docker/docker-compose.yml down
 
 clean:
-	rm -rf .pytest_cache .coverage htmlcov .mypy_cache .ruff_cache
-	find . -type d -name "__pycache__" -exec rm -rf {} +
+	python -c "import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for p in (list(pathlib.Path('.').rglob('__pycache__')) + [pathlib.Path(d) for d in ['.pytest_cache', '.coverage', 'htmlcov', '.mypy_cache', '.ruff_cache']])]"
