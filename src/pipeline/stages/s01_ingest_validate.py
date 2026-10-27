@@ -87,7 +87,11 @@ def run_ingest_and_validate(
                 {"missing_class": cls_name, "raw_dir": str(raw_dir)},
             )
 
-        files = [f for f in cls_dir.iterdir() if f.is_file() and f.suffix.lower() in allowed_exts]
+        files = [
+            f
+            for f in sorted(cls_dir.rglob("*"))
+            if f.is_file() and f.suffix.lower() in allowed_exts
+        ]
 
         count = 0
         for f in files:
