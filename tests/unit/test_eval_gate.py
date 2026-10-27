@@ -110,3 +110,30 @@ def test_gate_strategy_configuration() -> None:
 
     cfg_warn = EvaluationGateConfig(gate_strategy=GateStrategy.WARN)
     assert cfg_warn.gate_strategy == "warn"
+
+
+def test_gate_passes_at_metric_ceiling_saturation() -> None:
+    """When production model baseline is at maximum ceiling (1.0), candidate at 1.0 passes."""
+    passed, reason, required = check_promotion_gate(
+        candidate_metric=1.0,
+        production_metric=1.0,
+        min_absolute_threshold=0.70,
+        min_improvement=0.01,
+        allow_first_model=True,
+    )
+    assert passed is True
+    assert required == 1.0
+    assert "reached maximum quality ceiling" in reason
+
+
+def test_gate_clamps_required_threshold_to_one() -> None:
+    """Ensure required threshold does not exceed 1.0."""
+    passed, reason, required = check_promotion_gate(
+        candidate_metric=0.98,
+        production_metric=0.995,
+        min_absolute_threshold=0.70,
+        min_improvement=0.01,
+        allow_first_model=True,
+    )
+    assert passed is False
+    assert required == 1.0

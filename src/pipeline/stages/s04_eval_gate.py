@@ -96,7 +96,17 @@ def check_promotion_gate(
             min_absolute_threshold,
         )
 
-    required_threshold = production_metric + min_improvement
+    # Calculate required threshold, capped at 1.0 (since normalized metrics cannot exceed 1.0)
+    required_threshold = min(1.0, production_metric + min_improvement)
+
+    # If production baseline is already at maximum ceiling, allow candidate if it also achieves maximum ceiling
+    if production_metric >= (1.0 - min_improvement) and candidate_metric >= (1.0 - 1e-4):
+        return (
+            True,
+            f"Candidate metric ({candidate_metric:.4f}) reached maximum quality ceiling alongside production baseline ({production_metric:.4f})",
+            required_threshold,
+        )
+
     if candidate_metric >= required_threshold:
         delta = candidate_metric - production_metric
         return (
