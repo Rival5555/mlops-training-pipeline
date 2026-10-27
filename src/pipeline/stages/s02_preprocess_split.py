@@ -58,7 +58,7 @@ def run_preprocess_and_split(
         cls_dir = raw_dir / cls_name
         if not cls_dir.exists():
             raise PreprocessingError(f"Class folder not found: {cls_dir}")
-        for img_path in sorted(cls_dir.iterdir()):
+        for img_path in sorted(cls_dir.rglob("*")):
             if img_path.is_file() and img_path.suffix.lower() in allowed_exts:
                 all_filepaths.append(img_path)
                 all_labels.append(cls_idx)
@@ -106,11 +106,10 @@ def run_preprocess_and_split(
     ) -> list[dict[str, Any]]:
         records = []
         for p, y in zip(paths, labels, strict=False):
+            rel_path = p.relative_to(raw_dir.parent) if p.is_relative_to(raw_dir.parent) else p
             records.append(
                 {
-                    "filepath": str(
-                        p.relative_to(raw_dir.parent) if p.is_relative_to(raw_dir.parent) else p
-                    ),
+                    "filepath": rel_path.as_posix(),
                     "label": y,
                     "class_name": expected_classes[y],
                     "split": split_name,

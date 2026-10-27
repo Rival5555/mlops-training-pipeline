@@ -46,7 +46,7 @@ class ManifestImageDataset(Dataset):
 
     def __getitem__(self, idx: int) -> tuple[torch.Tensor, int]:
         record = self.records[idx]
-        file_path = self.root_dir / record["filepath"]
+        file_path = self.root_dir / Path(record["filepath"])
         try:
             with Image.open(file_path) as img:
                 img_rgb = img.convert("RGB")
@@ -95,7 +95,7 @@ def create_model(config: PipelineConfig) -> nn.Module:
         model = models.efficientnet_b0(weights=weights)
         in_features = model.classifier[1].in_features
         model.classifier = nn.Sequential(
-            nn.Dropout(p=dropout, inplace=True),
+            nn.Dropout(p=dropout, inplace=False),
             nn.Linear(in_features, num_classes),
         )
     elif "resnet18" in arch:
