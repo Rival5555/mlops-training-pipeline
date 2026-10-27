@@ -99,6 +99,9 @@ def run_model_registration(
         git_commit = get_git_commit_hash()
         config_hash = config.compute_hash()
 
+        target_stage = "Production" if promote_to_production else "Staging"
+        alias = "champion" if promote_to_production else "challenger"
+
         tags = {
             "git_commit": git_commit,
             "dataset_version_hash": data_hash,
@@ -106,7 +109,8 @@ def run_model_registration(
             "primary_metric": gate_decision.get("primary_metric", "f1_macro"),
             "candidate_metric_value": str(gate_decision.get("candidate_metric_value", "")),
             "gate_passed": "true",
-            "stage": "staging",
+            "stage": target_stage.lower(),
+            "alias": alias,
         }
 
         # Log metrics as individual tags
@@ -116,8 +120,14 @@ def run_model_registration(
         for k, v in tags.items():
             client.set_model_version_tag(name=model_name, version=version_id, key=k, value=v)
 
-        # Assign Stage: Staging by default
-        target_stage = "Production" if promote_to_production else "Staging"
+        # Set modern MLflow alias (@champion / @challenger)
+        try:
+            client.set_registered_model_alias(name=model_name, alias=alias, version=version_id)
+            logger.info("Assigned model alias", alias=alias, version=version_id, model_name=model_name)
+        except Exception as alias_err:
+            logger.debug("Model alias assignment skipped or not supported", error=str(alias_err))
+
+        # Assign Stage: Staging by default, or Production if requested
         try:
             client.transition_model_version_stage(
                 name=model_name,
