@@ -283,6 +283,14 @@ def run_training(
             scheduler.step()
 
             epoch_train_loss = train_loss / len(train_ds)
+            if np.isnan(epoch_train_loss) or np.isinf(epoch_train_loss):
+                raise TrainingError(
+                    f"Training loss diverged to {epoch_train_loss} at epoch {epoch}"
+                )
+            if np.isnan(epoch_train_loss) or np.isinf(epoch_train_loss):
+                raise TrainingError(
+                    f"Training loss diverged to {epoch_train_loss} at epoch {epoch}"
+                )
             epoch_train_acc = accuracy_score(train_targets, train_preds)
             epoch_train_f1 = f1_score(train_targets, train_preds, average="macro", zero_division=0)
 
