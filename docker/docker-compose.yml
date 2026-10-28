@@ -11,7 +11,7 @@ services:
       - MLFLOW_TRACKING_URI=sqlite:////mlflow/mlflow.db
     volumes:
       - mlflow_data:/mlflow
-      - ./mlartifacts:/mlartifacts
+      - ../mlartifacts:/mlartifacts
     command: >
       mlflow server
       --backend-store-uri sqlite:////mlflow/mlflow.db
