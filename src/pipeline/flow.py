@@ -7,10 +7,13 @@ Features:
 - Graceful standalone CLI execution (`python -m src.pipeline.flow`)
 """
 
+import os
 import sys
+from pathlib import Path
 from typing import Any
 
 import click
+from dotenv import load_dotenv
 
 from src.pipeline.common.exceptions import PipelineBaseException
 from src.pipeline.common.logger import get_logger
@@ -22,13 +25,18 @@ from src.pipeline.stages.s04_eval_gate import run_evaluation_gate
 from src.pipeline.stages.s05_register import run_model_registration
 from src.pipeline.stages.s06_export_package import run_export_and_package
 
+# Load environment variables and configure cache directories locally
+load_dotenv()
+os.environ.setdefault("PREFECT_HOME", str(Path.cwd() / ".prefect"))
+os.environ.setdefault("MPLCONFIGDIR", str(Path.cwd() / ".matplotlib_cache"))
+
 logger = get_logger("orchestrator_flow")
 
 try:
     from prefect import flow, task
 
     _HAS_PREFECT = True
-except ImportError:
+except (ImportError, Exception):
     _HAS_PREFECT = False
 
     # Minimal decorator fallbacks if Prefect is not installed
@@ -77,16 +85,17 @@ def task_export(config: PipelineConfig) -> dict[str, Any]:
 
 @flow(name="automated-mlops-training-pipeline", log_prints=True)
 def mlops_training_pipeline(
-    config_path: str = "configs/config.yaml",
+    config: PipelineConfig | None = None,
+    config_path: str | Path | None = None,
     promote_to_production: bool = False,
 ) -> dict[str, Any]:
     """Execute full automated MLOps training pipeline."""
-    logger.info("Initializing automated MLOps pipeline run", config_path=config_path)
-    config = load_config(config_path)
+    if config is None:
+        config = load_config(config_path)
 
     config_hash = config.compute_hash()
     logger.info(
-        "Loaded pipeline configuration",
+        "Initializing automated MLOps pipeline run",
         project=config.project_name,
         env=config.environment,
         config_hash=config_hash,
@@ -129,6 +138,62 @@ def mlops_training_pipeline(
     return pipeline_result
 
 
+def run_pipeline_e2e(
+    config: PipelineConfig | None = None,
+    config_path: str | Path | None = None,
+    promote_to_production: bool = False,
+) -> dict[str, Any]:
+    """Execute full automated MLOps training pipeline directly without Prefect orchestration engine."""
+    if config is None:
+        config = load_config(config_path)
+
+    config_hash = config.compute_hash()
+    logger.info(
+        "Initializing automated MLOps pipeline run (direct execution)",
+        project=config.project_name,
+        env=config.environment,
+        config_hash=config_hash,
+    )
+
+    # Stage 1: Data Ingestion & Validation
+    validation_report = run_ingest_and_validate(config)
+
+    # Stage 2: Preprocessing & Stratified Splitting
+    split_manifest = run_preprocess_and_split(config)
+
+    # Stage 3: PyTorch Model Training & Checkpointing
+    train_summary = run_training(config)
+
+    # Stage 4: Held-out Test Evaluation & Baseline Gate Check
+    gate_decision = run_evaluation_gate(config)
+
+    # Stage 5: MLflow Model Registration (Staging / Production)
+    registration_result = run_model_registration(
+        config, promote_to_production=promote_to_production
+    )
+
+    # Stage 6: ONNX Export & Parity Verification
+    export_summary = run_export_and_package(config)
+
+    pipeline_result = {
+        "status": "COMPLETED_SUCCESSFULLY",
+        "config_hash": config_hash,
+        "dataset_hash": split_manifest.get("dataset_version_hash"),
+        "validation_report": validation_report,
+        "train_summary": train_summary,
+        "gate_decision": gate_decision,
+        "registration_result": registration_result,
+        "export_summary": export_summary,
+    }
+
+    logger.info(
+        "MLOps Training Pipeline completed all stages successfully!",
+        model_version=registration_result.get("model_version"),
+        gate_status="PASSED",
+    )
+    return pipeline_result
+
+
 @click.command()
 @click.option("--config", "config_path", default="configs/config.yaml", help="Path to config YAML")
 @click.option(
@@ -137,13 +202,43 @@ def mlops_training_pipeline(
     default=False,
     help="Promote model to Production stage if gate passes",
 )
-def main(config_path: str, promote_to_production: bool) -> None:
+@click.option(
+    "--standalone",
+    is_flag=True,
+    default=False,
+    help="Execute pipeline directly without Prefect orchestration engine",
+)
+def main(config_path: str, promote_to_production: bool, standalone: bool = False) -> None:
     """CLI Runner for the complete MLOps pipeline flow."""
     try:
-        mlops_training_pipeline(
-            config_path=config_path,
-            promote_to_production=promote_to_production,
+        use_prefect = (
+            _HAS_PREFECT
+            and not standalone
+            and os.getenv("PREFECT_ENABLED", "true").lower() != "false"
         )
+        if use_prefect:
+            try:
+                mlops_training_pipeline(
+                    config_path=config_path,
+                    promote_to_production=promote_to_production,
+                )
+            except RuntimeError as err:
+                if "Prefect API" in str(err) or "ephemeral" in str(err).lower():
+                    logger.warning(
+                        "Prefect API server unavailable/timed out; falling back to direct execution",
+                        error=str(err),
+                    )
+                    run_pipeline_e2e(
+                        config_path=config_path,
+                        promote_to_production=promote_to_production,
+                    )
+                else:
+                    raise
+        else:
+            run_pipeline_e2e(
+                config_path=config_path,
+                promote_to_production=promote_to_production,
+            )
     except PipelineBaseException as e:
         logger.error("Pipeline execution aborted due to typed failure!", error=str(e))
         sys.exit(1)
