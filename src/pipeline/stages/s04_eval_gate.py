@@ -193,9 +193,12 @@ def run_evaluation_gate(
     # Connect to MLflow
     client = setup_mlflow(config.mlflow)
     primary_metric_key = config.evaluate.primary_metric
-    candidate_metric = computed_metrics.get(
-        f"test_{primary_metric_key}", computed_metrics.get(primary_metric_key, f1_macro)
-    )
+    candidate_metric = computed_metrics.get(f"test_{primary_metric_key}")
+    if candidate_metric is None:
+        raise EvaluationGateError(
+            f"Primary metric '{primary_metric_key}' was not computed",
+            {"available_metrics": sorted(computed_metrics)},
+        )
 
     # Fetch active production baseline
     prod_baseline = get_production_model_metrics(

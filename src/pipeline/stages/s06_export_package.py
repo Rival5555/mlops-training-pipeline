@@ -69,6 +69,11 @@ def run_export_and_package(
     if config is None:
         config = load_config(config_path)
 
+    if config.export.export_format.lower() != "onnx":
+        raise ParityCheckError(
+            f"Unsupported export format: {config.export.export_format}. Only 'onnx' is supported."
+        )
+
     best_model_path = config.train.checkpoint_dir / "best_model.pt"
     if not best_model_path.exists():
         raise ParityCheckError(f"Model checkpoint not found at {best_model_path}")
@@ -151,7 +156,7 @@ def run_export_and_package(
             logger.warning("Could not log ONNX artifact to MLflow run", error=str(e))
 
     export_summary = {
-        "format": "onnx",
+        "format": config.export.export_format.lower(),
         "onnx_path": str(onnx_path),
         "opset_version": config.export.opset_version,
         "parity_verified": True,

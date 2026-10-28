@@ -4,7 +4,7 @@ import hashlib
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import yaml
 from pydantic import BaseModel, Field, model_validator
@@ -18,6 +18,14 @@ class GateStrategy(str, Enum):
 class NormalizationConfig(BaseModel):
     mean: list[float] = Field(default=[0.485, 0.456, 0.406])
     std: list[float] = Field(default=[0.229, 0.224, 0.225])
+
+    @model_validator(mode="after")
+    def validate_channels(self) -> "NormalizationConfig":
+        if len(self.mean) != len(self.std):
+            raise ValueError("Normalization mean and std must have the same number of channels")
+        if not self.mean:
+            raise ValueError("Normalization mean and std must not be empty")
+        return self
 
 
 class AugmentationConfig(BaseModel):
@@ -63,8 +71,23 @@ class ModelConfig(BaseModel):
     freeze_backbone: bool = Field(default=False)
     class_names: list[str] = Field(default=["healthy", "referable_dr"])
 
+    @model_validator(mode="after")
+    def validate_class_names(self) -> "ModelConfig":
+        if len(self.class_names) != self.num_classes:
+            raise ValueError(
+                f"num_classes ({self.num_classes}) must match class_names length "
+                f"({len(self.class_names)})"
+            )
+        if len(set(self.class_names)) != len(self.class_names):
+            raise ValueError("class_names must be unique")
+        if any(not name.strip() for name in self.class_names):
+            raise ValueError("class_names must not contain blank names")
+        return self
+
 
 class TrainingConfig(BaseModel):
+    SUPPORTED_SCHEDULERS: ClassVar[set[str]] = {"cosine", "none"}
+    SUPPORTED_EARLY_STOPPING_METRICS: ClassVar[set[str]] = {"val_loss", "val_f1"}
     epochs: int = Field(default=5, ge=1)
     learning_rate: float = Field(default=0.0003, gt=0.0)
     weight_decay: float = Field(default=0.0001, ge=0.0)
@@ -80,8 +103,35 @@ class TrainingConfig(BaseModel):
     log_interval_steps: int = Field(default=10, ge=1)
     seed: int = Field(default=42)
 
+    @model_validator(mode="after")
+    def validate_training_options(self) -> "TrainingConfig":
+        if self.scheduler.lower() not in self.SUPPORTED_SCHEDULERS:
+            raise ValueError(
+                f"Unsupported scheduler '{self.scheduler}'. "
+                f"Choose one of {sorted(self.SUPPORTED_SCHEDULERS)}"
+            )
+        if self.early_stopping_metric.lower() not in self.SUPPORTED_EARLY_STOPPING_METRICS:
+            raise ValueError(
+                f"Unsupported early_stopping_metric '{self.early_stopping_metric}'. "
+                f"Choose one of {sorted(self.SUPPORTED_EARLY_STOPPING_METRICS)}"
+            )
+        if self.early_stopping_mode.lower() not in {"min", "max"}:
+            raise ValueError("early_stopping_mode must be either 'min' or 'max'")
+        if self.early_stopping_metric.lower() == "val_loss" and self.early_stopping_mode.lower() != "min":
+            raise ValueError("val_loss must use early_stopping_mode='min'")
+        if self.early_stopping_metric.lower() == "val_f1" and self.early_stopping_mode.lower() != "max":
+            raise ValueError("val_f1 must use early_stopping_mode='max'")
+        return self
+
 
 class EvaluationGateConfig(BaseModel):
+    SUPPORTED_METRICS: ClassVar[set[str]] = {
+        "accuracy",
+        "f1_macro",
+        "f1_weighted",
+        "precision_macro",
+        "recall_macro",
+    }
     primary_metric: str = Field(default="f1_macro")
     min_absolute_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
     min_improvement_over_production: float = Field(default=0.01, ge=0.0)
@@ -91,6 +141,18 @@ class EvaluationGateConfig(BaseModel):
     )
     gate_decision_output: Path = Field(default=Path("models/checkpoints/gate_decision.json"))
     gate_strategy: GateStrategy = Field(default=GateStrategy.FAIL)
+
+    @model_validator(mode="after")
+    def validate_metrics(self) -> "EvaluationGateConfig":
+        if self.primary_metric not in self.SUPPORTED_METRICS:
+            raise ValueError(
+                f"Unsupported primary_metric '{self.primary_metric}'. "
+                f"Choose one of {sorted(self.SUPPORTED_METRICS)}"
+            )
+        unsupported = set(self.metrics_to_compute) - self.SUPPORTED_METRICS
+        if unsupported:
+            raise ValueError(f"Unsupported metrics_to_compute: {sorted(unsupported)}")
+        return self
 
 
 class ExportConfig(BaseModel):
@@ -103,6 +165,12 @@ class ExportConfig(BaseModel):
     float_tolerance_rtol: float = Field(default=0.001, gt=0.0)
     dummy_input_shape: list[int] = Field(default=[1, 3, 224, 224])
     verify_onnx_runtime: bool = Field(default=True)
+
+    @model_validator(mode="after")
+    def validate_export_format(self) -> "ExportConfig":
+        if self.export_format.lower() != "onnx":
+            raise ValueError("Only 'onnx' export_format is supported")
+        return self
 
 
 class MLflowConfig(BaseModel):

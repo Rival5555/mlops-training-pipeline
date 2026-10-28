@@ -197,7 +197,9 @@ def run_training(
         raise TrainingError(f"Unsupported optimizer: {optimizer_name}")
 
     epochs = config.train.epochs
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None = None
+    if config.train.scheduler.lower() == "cosine":
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     # Mixed precision scaler
     use_amp = config.train.mixed_precision and device.type == "cuda"
@@ -280,7 +282,8 @@ def run_training(
                 train_preds.extend(preds)
                 train_targets.extend(targets.cpu().numpy())
 
-            scheduler.step()
+            if scheduler is not None:
+                scheduler.step()
 
             epoch_train_loss = train_loss / len(train_ds)
             epoch_train_acc = accuracy_score(train_targets, train_preds)
@@ -319,7 +322,7 @@ def run_training(
                     "val_loss": epoch_val_loss,
                     "val_accuracy": epoch_val_acc,
                     "val_f1_macro": epoch_val_f1,
-                    "lr": float(scheduler.get_last_lr()[0]),
+                    "lr": float(optimizer.param_groups[0]["lr"]),
                 },
                 step=epoch,
             )

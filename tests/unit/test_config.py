@@ -7,6 +7,8 @@ from pydantic import ValidationError
 
 from src.pipeline.config.schema import (
     DataConfig,
+    EvaluationGateConfig,
+    ExportConfig,
     ModelConfig,
     PipelineConfig,
     TrainingConfig,
@@ -47,6 +49,30 @@ def test_invalid_dropout_rate() -> None:
 
     with pytest.raises(ValidationError):
         ModelConfig(dropout_rate=-0.1)
+
+
+def test_model_class_configuration_must_match() -> None:
+    """Reject model configurations whose output count disagrees with labels."""
+    with pytest.raises(ValidationError, match="num_classes"):
+        ModelConfig(num_classes=3, class_names=["healthy", "referable_dr"])
+
+
+def test_training_options_are_validated() -> None:
+    """Reject options that the training implementation cannot honor."""
+    with pytest.raises(ValidationError, match="Unsupported scheduler"):
+        TrainingConfig(scheduler="step")
+
+    with pytest.raises(ValidationError, match="early_stopping_mode"):
+        TrainingConfig(early_stopping_metric="val_f1", early_stopping_mode="min")
+
+
+def test_metric_and_export_options_are_validated() -> None:
+    """Reject unsupported evaluation metrics and export formats."""
+    with pytest.raises(ValidationError, match="Unsupported primary_metric"):
+        EvaluationGateConfig(primary_metric="auc")
+
+    with pytest.raises(ValidationError, match="Only 'onnx'"):
+        ExportConfig(export_format="torchscript")
 
 
 def test_config_hash_determinism() -> None:
