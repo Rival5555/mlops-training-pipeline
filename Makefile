@@ -1,4 +1,4 @@
-.PHONY: help install lint format test test-gate generate-data train stage1 stage2 stage3 stage4 stage5 stage6 docker-up docker-down clean
+.PHONY: help install lint format test test-gate generate-data train train-standalone stage1 stage2 stage3 stage4 stage5 stage6 docker-up docker-down clean
 
 help:
 	@echo "Available commands:"
@@ -42,6 +42,9 @@ generate-data:
 
 train:
 	python -m src.pipeline.flow --config configs/config.yaml
+
+train-standalone:
+	python -m src.pipeline.flow --config configs/config.yaml --standalone
 
 stage1:
 	python -m src.pipeline.stages.s01_ingest_validate --config configs/config.yaml

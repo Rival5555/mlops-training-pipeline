@@ -45,6 +45,7 @@ models/exported/
 mlruns/
 mlartifacts/
 .prefect/
+.matplotlib_cache/
 *.db
 
 # DVC local storage
