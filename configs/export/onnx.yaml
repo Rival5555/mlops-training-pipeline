@@ -1,6 +1,6 @@
 # Model Packaging and Export Configuration
 export_format: "onnx"
-opset_version: 17
+opset_version: 18
 dynamic_batch: true
 output_dir: "models/exported"
 output_filename: "model.onnx"

@@ -28,8 +28,8 @@ class AugmentationConfig(BaseModel):
 
 
 class DataConfig(BaseModel):
-    raw_data_dir: Path = Field(default=Path("data/raw"))
-    processed_data_dir: Path = Field(default=Path("data/processed"))
+    raw_data_dir: Path = Field(default_factory=lambda: Path("data/raw"))
+    processed_data_dir: Path = Field(default_factory=lambda: Path("data/processed"))
     train_ratio: float = Field(default=0.70, gt=0.0, lt=1.0)
     val_ratio: float = Field(default=0.15, gt=0.0, lt=1.0)
     test_ratio: float = Field(default=0.15, gt=0.0, lt=1.0)
@@ -63,6 +63,14 @@ class ModelConfig(BaseModel):
     freeze_backbone: bool = Field(default=False)
     class_names: list[str] = Field(default=["healthy", "referable_dr"])
 
+    @model_validator(mode="after")
+    def validate_class_names_count(self) -> "ModelConfig":
+        if len(self.class_names) != self.num_classes:
+            raise ValueError(
+                f"Length of class_names ({len(self.class_names)}) must match num_classes ({self.num_classes})"
+            )
+        return self
+
 
 class TrainingConfig(BaseModel):
     epochs: int = Field(default=5, ge=1)
@@ -75,10 +83,22 @@ class TrainingConfig(BaseModel):
     early_stopping_patience: int = Field(default=3, ge=1)
     early_stopping_metric: str = Field(default="val_loss")
     early_stopping_mode: str = Field(default="min")
-    checkpoint_dir: Path = Field(default=Path("models/checkpoints"))
+    checkpoint_dir: Path = Field(default_factory=lambda: Path("models/checkpoints"))
     save_best_and_last: bool = Field(default=True)
     log_interval_steps: int = Field(default=10, ge=1)
     seed: int = Field(default=42)
+
+    @model_validator(mode="after")
+    def validate_training_settings(self) -> "TrainingConfig":
+        valid_modes = {"min", "max"}
+        if self.early_stopping_mode.lower() not in valid_modes:
+            raise ValueError(
+                f"early_stopping_mode must be one of {valid_modes}, got '{self.early_stopping_mode}'"
+            )
+        valid_optimizers = {"adamw", "adam", "sgd"}
+        if self.optimizer.lower() not in valid_optimizers:
+            raise ValueError(f"optimizer must be one of {valid_optimizers}, got '{self.optimizer}'")
+        return self
 
 
 class EvaluationGateConfig(BaseModel):
@@ -89,15 +109,17 @@ class EvaluationGateConfig(BaseModel):
     metrics_to_compute: list[str] = Field(
         default=["accuracy", "f1_macro", "f1_weighted", "precision_macro", "recall_macro"]
     )
-    gate_decision_output: Path = Field(default=Path("models/checkpoints/gate_decision.json"))
+    gate_decision_output: Path = Field(
+        default_factory=lambda: Path("models/checkpoints/gate_decision.json")
+    )
     gate_strategy: GateStrategy = Field(default=GateStrategy.FAIL)
 
 
 class ExportConfig(BaseModel):
     export_format: str = Field(default="onnx")
-    opset_version: int = Field(default=17, ge=11, le=19)
+    opset_version: int = Field(default=18, ge=11, le=19)
     dynamic_batch: bool = Field(default=True)
-    output_dir: Path = Field(default=Path("models/exported"))
+    output_dir: Path = Field(default_factory=lambda: Path("models/exported"))
     output_filename: str = Field(default="model.onnx")
     float_tolerance_atol: float = Field(default=0.0001, gt=0.0)
     float_tolerance_rtol: float = Field(default=0.001, gt=0.0)
