@@ -96,17 +96,26 @@ def run_export_and_package(
             "output": {0: "batch_size"},
         }
 
+    # Prepare export keyword arguments
+    export_kwargs: dict[str, Any] = {
+        "export_params": True,
+        "opset_version": config.export.opset_version,
+        "do_constant_folding": True,
+        "input_names": ["input"],
+        "output_names": ["output"],
+        "dynamic_axes": dynamic_axes,
+    }
+    import inspect
+
+    if "dynamo" in inspect.signature(torch.onnx.export).parameters:
+        export_kwargs["dynamo"] = False
+
     # Export to ONNX
     torch.onnx.export(
         model,
         (dummy_input,),
         str(onnx_path),
-        export_params=True,
-        opset_version=config.export.opset_version,
-        do_constant_folding=True,
-        input_names=["input"],
-        output_names=["output"],
-        dynamic_axes=dynamic_axes,
+        **export_kwargs,
     )
 
     # Validate ONNX model graph structure
@@ -117,8 +126,9 @@ def run_export_and_package(
     # Parity Smoke Test
     max_diff = 0.0
     if config.export.verify_onnx_runtime:
-        logger.info("Performing numerical parity smoke test...")
-        test_tensor = torch.randn(*input_shape)
+        test_batch = 2 if config.export.dynamic_batch else input_shape[0]
+        test_shape = [test_batch] + list(input_shape[1:])
+        test_tensor = torch.randn(*test_shape)
         is_close, max_diff = verify_numeric_parity(
             pytorch_model=model,
             onnx_path=onnx_path,
