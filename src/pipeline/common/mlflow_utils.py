@@ -4,6 +4,10 @@ import os
 import subprocess
 from pathlib import Path
 
+# Ensure writable local cache for matplotlib and silence internal CLI hints
+os.environ.setdefault("MPLCONFIGDIR", str(Path.cwd() / ".matplotlib_cache"))
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -59,6 +63,10 @@ def get_production_model_metrics(
             for v in versions
             if (v.current_stage and v.current_stage.lower() == "production")
             or (v.tags and v.tags.get("stage", "").lower() == "production")
+            or (
+                getattr(v, "aliases", None)
+                and ("champion" in v.aliases or "production" in v.aliases)
+            )
         ]
 
         if not prod_versions:
@@ -79,10 +87,21 @@ def get_production_model_metrics(
         run = client.get_run(prod_version.run_id)
         metric_val = run.data.metrics.get(metric_name)
 
+        if metric_val is None and metric_name.startswith("test_"):
+            metric_val = run.data.metrics.get(metric_name[5:])
+        elif metric_val is None and not metric_name.startswith("test_"):
+            metric_val = run.data.metrics.get(f"test_{metric_name}")
+
         if metric_val is None:
             # Check tags for metric
             if prod_version.tags and metric_name in prod_version.tags:
                 metric_val = float(prod_version.tags[metric_name])
+            elif (
+                prod_version.tags
+                and metric_name.startswith("test_")
+                and metric_name[5:] in prod_version.tags
+            ):
+                metric_val = float(prod_version.tags[metric_name[5:]])
 
         logger.info(
             "Retrieved production baseline",
