@@ -50,8 +50,8 @@ stages:
       - configs/config.yaml
       - configs/evaluate/gate.yaml
       - src/pipeline/stages/s05_register.py
-      - models/checkpoints/gate_decision.json
       - models/checkpoints/best_model.pt
+      - models/checkpoints/gate_decision.json
     outs:
       - models/checkpoints/registration_receipt.json:
           cache: false
