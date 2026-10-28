@@ -64,3 +64,24 @@ def test_load_config_reads_existing_file() -> None:
     config = load_config(Path("configs/config.yaml"))
     assert config.model.num_classes == 2
     assert config.evaluate.primary_metric == "f1_macro"
+
+
+def test_class_names_count_mismatch() -> None:
+    """Ensure mismatch between num_classes and class_names is rejected."""
+    with pytest.raises(ValidationError) as exc:
+        ModelConfig(num_classes=3, class_names=["healthy", "referable_dr"])
+    assert "Length of class_names (2) must match num_classes (3)" in str(exc.value)
+
+
+def test_invalid_early_stopping_mode() -> None:
+    """Ensure invalid early stopping modes are rejected."""
+    with pytest.raises(ValidationError) as exc:
+        TrainingConfig(early_stopping_mode="maximum")
+    assert "early_stopping_mode must be one of" in str(exc.value)
+
+
+def test_invalid_optimizer() -> None:
+    """Ensure unsupported optimizer names are rejected."""
+    with pytest.raises(ValidationError) as exc:
+        TrainingConfig(optimizer="adagrad")
+    assert "optimizer must be one of" in str(exc.value)
