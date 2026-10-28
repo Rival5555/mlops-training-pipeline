@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from src.pipeline.config.schema import PipelineConfig
+from src.pipeline.flow import run_pipeline_e2e
 from src.pipeline.stages.s01_ingest_validate import run_ingest_and_validate
 from src.pipeline.stages.s02_preprocess_split import run_preprocess_and_split
 from src.pipeline.stages.s03_train import run_training
@@ -50,3 +51,20 @@ def test_full_pipeline_end_to_end_smoke(
     export_summary = run_export_and_package(config=config)
     assert export_summary["parity_verified"] is True
     assert (config.export.output_dir / config.export.output_filename).exists()
+
+
+@pytest.mark.filterwarnings("ignore::UserWarning")
+def test_full_pipeline_run_pipeline_e2e(
+    base_test_config: PipelineConfig, synthetic_raw_dataset: Path
+) -> None:
+    """Ensure run_pipeline_e2e executes all 6 stages sequentially and returns valid result."""
+    config = base_test_config
+    config.data.raw_data_dir = synthetic_raw_dataset
+    config.evaluate.min_absolute_threshold = 0.20
+
+    result = run_pipeline_e2e(config=config, promote_to_production=False)
+    assert result["status"] == "COMPLETED_SUCCESSFULLY"
+    assert result["validation_report"]["status"] == "VALIDATED"
+    assert result["gate_decision"]["passed"] is True
+    assert result["registration_result"]["target_stage"] == "Staging"
+    assert result["export_summary"]["parity_verified"] is True
