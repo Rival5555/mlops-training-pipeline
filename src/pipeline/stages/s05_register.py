@@ -124,19 +124,26 @@ def run_model_registration(
         try:
             client.set_registered_model_alias(name=model_name, alias=alias, version=version_id)
             logger.info(
-                "Assigned model alias", alias=alias, version=version_id, model_name=model_name
+                "Assigned model alias",
+                alias=alias,
+                version=version_id,
+                model_name=model_name,
             )
         except Exception as alias_err:
             logger.debug("Model alias assignment skipped or not supported", error=str(alias_err))
 
         # Assign Stage: Staging by default, or Production if requested
         try:
-            client.transition_model_version_stage(
-                name=model_name,
-                version=version_id,
-                stage=target_stage,
-                archive_existing_versions=(target_stage == "Production"),
-            )
+            import warnings
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                client.transition_model_version_stage(
+                    name=model_name,
+                    version=version_id,
+                    stage=target_stage,
+                    archive_existing_versions=(target_stage == "Production"),
+                )
             logger.info(
                 f"Transitioned model version to '{target_stage}'",
                 version=version_id,
