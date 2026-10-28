@@ -30,16 +30,15 @@ jobs:
 
       - name: Code Quality & Linting (Ruff)
         run: |
-          ruff check .
-          ruff format --check .
+          .venv/bin/ruff check .
+          .venv/bin/ruff format --check .
 
       - name: Static Type Checking (Mypy)
-        run: |
-          mypy src/
+        run: .venv/bin/mypy src/
 
       - name: Execute Unit Tests & Quality Gates (Pytest)
         run: |
-          pytest tests/unit \
+          .venv/bin/pytest tests/unit \
             -v \
             --cov=src/pipeline \
             --cov-report=term-missing \
@@ -47,7 +46,7 @@ jobs:
 
       - name: Verify Promotion Gate Coverage Specifically
         run: |
-          pytest tests/unit/test_eval_gate.py -v
+          .venv/bin/pytest tests/unit/test_eval_gate.py -v
 
       - name: Upload Test Coverage Report
         uses: actions/upload-artifact@v4
