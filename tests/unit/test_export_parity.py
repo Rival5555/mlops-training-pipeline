@@ -36,12 +36,13 @@ def test_verify_numeric_parity_passes(tmp_path: Path) -> None:
 
     torch.onnx.export(
         model,
-        dummy_input,
+        (dummy_input,),
         str(onnx_path),
         input_names=["input"],
         output_names=["output"],
-        opset_version=17,
+        opset_version=18,
         dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
+        dynamo=False,
     )
 
     test_tensor = torch.randn(2, 3, 32, 32)
@@ -67,9 +68,10 @@ def test_verify_numeric_parity_detects_mismatch(tmp_path: Path) -> None:
 
     torch.onnx.export(
         model,
-        dummy_input,
+        (dummy_input,),
         str(onnx_path),
-        opset_version=17,
+        opset_version=18,
+        dynamo=False,
     )
 
     test_tensor = torch.randn(1, 3, 32, 32)
