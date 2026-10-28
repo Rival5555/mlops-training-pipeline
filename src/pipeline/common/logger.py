@@ -59,6 +59,13 @@ class PipelineLogger:
             extra_str = f" | {kwargs}" if kwargs else ""
             self._logger.warning(f"{event}{extra_str}")
 
+    def debug(self, event: str, **kwargs: Any) -> None:
+        if _HAS_STRUCTLOG:
+            self._logger.debug(event, **kwargs)
+        else:
+            extra_str = f" | {kwargs}" if kwargs else ""
+            self._logger.debug(f"{event}{extra_str}")
+
     def error(self, event: str, **kwargs: Any) -> None:
         if _HAS_STRUCTLOG:
             self._logger.error(event, **kwargs)

@@ -35,20 +35,10 @@ def setup_mlflow(config: MLflowConfig) -> MlflowClient:
     """Initialize MLflow tracking URI and experiment, returning an active MlflowClient."""
     os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
     tracking_uri = config.tracking_uri
-    try:
-        mlflow.set_tracking_uri(tracking_uri)
-        client = MlflowClient(tracking_uri=tracking_uri)
-        client.search_experiments(max_results=1)
-        logger.info("Connected to MLflow tracking backend", tracking_uri=tracking_uri)
-    except Exception as e:
-        local_uri = "sqlite:///mlflow.db"
-        logger.warning(
-            "Could not connect to tracking server; falling back to local SQLite backend",
-            error=str(e),
-            fallback_uri=local_uri,
-        )
-        mlflow.set_tracking_uri(local_uri)
-        client = MlflowClient(tracking_uri=local_uri)
+    mlflow.set_tracking_uri(tracking_uri)
+    client = MlflowClient(tracking_uri=tracking_uri)
+    client.search_experiments(max_results=1)
+    logger.info("Connected to MLflow tracking backend", tracking_uri=tracking_uri)
 
     mlflow.set_experiment(config.experiment_name)
     return client
