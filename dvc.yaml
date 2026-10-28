@@ -44,13 +44,26 @@ stages:
       - models/checkpoints/gate_decision.json:
           cache: false
 
-  register_export:
+  register:
+    cmd: python -m src.pipeline.stages.s05_register --config configs/config.yaml
+    deps:
+      - configs/config.yaml
+      - configs/evaluate/gate.yaml
+      - src/pipeline/stages/s05_register.py
+      - models/checkpoints/gate_decision.json
+      - models/checkpoints/best_model.pt
+    outs:
+      - models/checkpoints/registration_receipt.json:
+          cache: false
+
+  export:
     cmd: python -m src.pipeline.stages.s06_export_package --config configs/config.yaml
     deps:
       - configs/config.yaml
       - configs/export/onnx.yaml
       - src/pipeline/stages/s06_export_package.py
       - models/checkpoints/best_model.pt
+      - models/checkpoints/registration_receipt.json
     outs:
       - models/exported/model.onnx:
           cache: true

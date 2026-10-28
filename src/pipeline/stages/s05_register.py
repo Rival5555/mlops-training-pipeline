@@ -123,7 +123,9 @@ def run_model_registration(
         # Set modern MLflow alias (@champion / @challenger)
         try:
             client.set_registered_model_alias(name=model_name, alias=alias, version=version_id)
-            logger.info("Assigned model alias", alias=alias, version=version_id, model_name=model_name)
+            logger.info(
+                "Assigned model alias", alias=alias, version=version_id, model_name=model_name
+            )
         except Exception as alias_err:
             logger.debug("Model alias assignment skipped or not supported", error=str(alias_err))
 

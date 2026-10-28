@@ -14,8 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv for fast, reliable package management
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copy project specification
-COPY pyproject.toml .
+# Copy the files required by the build backend before resolving dependencies.
+COPY pyproject.toml README.md ./
+COPY src/ src/
 
 # Install dependencies into virtual environment
 RUN uv venv /opt/venv

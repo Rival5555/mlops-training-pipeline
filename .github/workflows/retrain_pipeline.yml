@@ -16,6 +16,9 @@ on:
         required: false
         default: "configs/config.yaml"
 
+permissions:
+  contents: read
+
 jobs:
   retrain-and-register:
     name: Execute Full MLOps Pipeline
@@ -48,12 +51,13 @@ jobs:
           MLFLOW_TRACKING_URI: "file:${{ github.workspace }}/mlruns"
           MLFLOW_EXPERIMENT_NAME: "ci_retraining_pipeline"
           MLFLOW_MODEL_NAME: "retinopathy_classifier"
+          CONFIG_PATH: ${{ inputs.config_path || 'configs/config.yaml' }}
         run: |
           PROMOTION_FLAG=""
           if [ "${{ inputs.promote_to_production }}" = "true" ]; then
             PROMOTION_FLAG="--promote-to-production"
           fi
-          python -m src.pipeline.flow --config ${{ inputs.config_path || 'configs/config.yaml' }} $PROMOTION_FLAG
+          python -m src.pipeline.flow --config "$CONFIG_PATH" $PROMOTION_FLAG
 
       - name: Upload Gate Decision & Exported Artifacts
         uses: actions/upload-artifact@v4
