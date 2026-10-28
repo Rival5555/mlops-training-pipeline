@@ -56,7 +56,7 @@ def evaluate_model_on_dataset(
             probs = torch.softmax(outputs, dim=1).cpu().numpy()
             preds = np.argmax(probs, axis=1)
 
-            all_targets.extend(targets.numpy().tolist())
+            all_targets.extend(targets.cpu().numpy().tolist())
             all_preds.extend(preds.tolist())
             all_probs.extend(probs.tolist())
 
@@ -176,7 +176,8 @@ def run_evaluation_gate(
     f1_weighted = float(f1_score(y_true, y_pred, average="weighted", zero_division=0))
     prec_macro = float(precision_score(y_true, y_pred, average="macro", zero_division=0))
     rec_macro = float(recall_score(y_true, y_pred, average="macro", zero_division=0))
-    cm = confusion_matrix(y_true, y_pred).tolist()
+    all_class_indices = list(range(len(config.model.class_names)))
+    cm = confusion_matrix(y_true, y_pred, labels=all_class_indices).tolist()
 
     computed_metrics = {
         "test_accuracy": acc,
