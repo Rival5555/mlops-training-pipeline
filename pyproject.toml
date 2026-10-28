@@ -97,3 +97,7 @@ minversion = "7.0"
 addopts = "-ra -q --strict-markers"
 testpaths = ["tests"]
 pythonpath = ["."]
+filterwarnings = [
+    "ignore::DeprecationWarning:torch.onnx.*",
+    "ignore::FutureWarning:mlflow.*"
+]
